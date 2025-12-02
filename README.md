@@ -27,3 +27,22 @@ calls and the total tokens used.
 
 - Reference folder: 
   - our A6 in class submission to guide our implementation
+
+Run these in this order(these are for windows):
+
+Create the venv environment:
+`python -m venv venv`
+
+Run the venv environment(windows):
+`venv\Scripts\activate`
+
+Download these:
+`python -m pip install langchain-mcp-adapters gradio langgraph langchain-google-genai python-dotenv`
+
+Check if these downloaded:
+`python -c "import langchain_mcp_adapters; print('OK')"`
+
+Start the ui:
+`python -m ui.app`
+
+Make sure to refresh the UI whenever you make changes to the `system_runner.py`
