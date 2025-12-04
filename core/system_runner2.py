@@ -13,13 +13,15 @@ from dotenv import load_dotenv
 # Load API key
 # -------------------------
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
 
 # -------------------------
 # Initialize model
 # -------------------------
-model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
-
+model = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    api_key=os.getenv("GOOGLE_API_KEY"),
+    temperature=0
+)
 # -------------------------
 # Log function
 # -------------------------
@@ -47,9 +49,10 @@ async def run_agent(server_path: str, input_text: str) -> str:
             messages = [HumanMessage(content=input_text)]
             
             # Run the agent
-            response = await agent.ainvoke({"messages": messages})
-        
-            return str(response)
+            result = await agent.ainvoke({"messages": messages})
+
+            final_message = result["messages"][-1].content
+            print(final_message)
         
 
 # -------------------------

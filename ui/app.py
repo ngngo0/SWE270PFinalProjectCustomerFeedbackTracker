@@ -1,6 +1,6 @@
 import gradio as gr
 import asyncio
-from core.system_runner import run_system  # build_agent + workflow
+from core.system_runner2 import run_system  # build_agent + workflow
 
 # Gradio interface function (synchronous from Gradio's perspective)
 def interface_fn(description, requirements):
