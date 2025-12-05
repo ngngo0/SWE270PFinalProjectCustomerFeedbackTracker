@@ -30,19 +30,33 @@ calls and the total tokens used.
 
 Run these in this order(these are for windows):
 
-Create the venv environment:
-`python -m venv venv`
+1. Set up virtual environment 
+```sh
+conda create --name feedback python=3.11
+conda activate feedback
+```
 
-Run the venv environment(windows):
-`venv\Scripts\activate`
+2. Set up environment variable: Create a `.env` file in project root (`SWE270PFinalProjectCustomerFeedbackTracker/.env`) and add your GOOGLE_API_KEY:
+GOOGLE_API_KEY={your_google_api_key_here}
 
-Download these:
-`python -m pip install langchain-mcp-adapters gradio langgraph langchain-google-genai python-dotenv`
+3. Ensure you are in the correct directory:
+```sh
+cd SWE270PFinalProjectCustomerFeedbackTracker
+```
 
-Check if these downloaded:
-`python -c "import langchain_mcp_adapters; print('OK')"`
+4. Install required packages:
+```sh
+python -m pip install langchain langchain-core langchain-mcp-adapters langchain-google-genai gradio python-dotenv langgraph
+```
 
-Start the ui:
-`python -m ui.app`
+5. Restart terminal after installation:
+```sh
+source ~/.bashrc
+```
+
+5. To run the the UI:
+```sh
+python -m ui.app
+```
 
 Make sure to refresh the UI whenever you make changes to the `system_runner.py`
