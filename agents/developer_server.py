@@ -2,7 +2,7 @@ import os
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("Developer")
-BASE_PATH = "generated/code"
+BASE_PATH = "generated"
 os.makedirs(BASE_PATH, exist_ok=True)
 
 @mcp.tool()
