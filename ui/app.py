@@ -9,9 +9,9 @@ def interface_fn(description, requirements):
     result = asyncio.run(run_system(description, requirements))
     # return plan, code, tests as separate outputs
         # Convert dict outputs to formatted strings
-    plan_str = json.dumps(result["plan"], indent=2)
-    code_str = json.dumps(result["code"], indent=2)
-    tests_str = json.dumps(result["tests"], indent=2)
+    plan_str = json.dumps(result["plan"]["raw"], indent=2)
+    code_str = json.dumps(result["code"]["raw"], indent=2)
+    tests_str = json.dumps(result["tests"]["raw"], indent=2)
     return plan_str, code_str, tests_str
 
 with gr.Blocks(title="MCP Multi-Agent Software Generator") as app:
