@@ -20,7 +20,9 @@ load_dotenv()
 # -------------------------
 model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
-    api_key=os.getenv("GOOGLE_API_KEY"),
+    # model="gemini-3-pro-preview",
+    # model="gemini-2.0-flash-lite",
+    api_key=os.getenv("GOOGLE_API_KEY_2"),
     temperature=0
 )
 
@@ -95,25 +97,38 @@ async def run_system(description: str, requirements: str, status_callback=None):
 
     # Planner agent
     await log_status("Building planner agent...", status_callback)
-    planner_output = await run_agent("agents/planner_server.py", input_data, 
-                                     "You are a planner agent, create a plan for this software based on these requirements")
+    planner_system_prompt = load_prompt("core/prompts/planner.txt")
+    await log_status("Prompt loaded, executing planner agent...", status_callback)
+
+    planner_output = await run_agent("agents/planner_server.py", input_data, planner_system_prompt)
     await log_status("Planner completed!")
+    print("Planner output:", planner_output)
 
     # Developer agent
     await log_status("Building developer agent...", status_callback)
-    developer_output = await run_agent("agents/developer_server.py", {"planner_output": planner_output}, "You are a software developer. Given this plan, make a readme, and the full application with a local host version I can spin up.")
+    developer_system_prompt = load_prompt("core/prompts/developer.txt")
+    await log_status("Prompt loaded, executing developer agent...", status_callback)
+    developer_output = await run_agent("agents/developer_server.py", {"planner_output": planner_output}, developer_system_prompt)
     await log_status("Developer completed!")
+    print("Developer output:", developer_output)
 
     # Tester agent
     await log_status("Building tester agent...", status_callback)
-    tester_output = await run_agent("agents/tester_server.py", {"developer_output": developer_output}, "You are a software tester. Given the files in the generated folder, write test cases and run the test cases to make sure there are no bugs.")
+    tester_system_prompt = load_prompt("core/prompts/tester.txt")
+    await log_status("Prompt loaded, executing tester agent...", status_callback)
+    tester_output = await run_agent("agents/tester_server.py", {"developer_output": developer_output}, tester_system_prompt)
     await log_status("Tester completed!")
+    print("Tester output:", tester_output)
 
     return {
         "plan": planner_output,
         "code": developer_output,
         "tests": tester_output
     }
+
+def load_prompt(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 # -------------------------
 # CLI
