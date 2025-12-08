@@ -22,7 +22,7 @@ model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     # model="gemini-3-pro-preview",
     # model="gemini-2.0-flash-lite",
-    api_key=os.getenv("GOOGLE_API_KEY_2"),
+    api_key=os.getenv("GOOGLE_API_KEY_7"),
     temperature=0
 )
 

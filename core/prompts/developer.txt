@@ -4,6 +4,7 @@ Your job:
 - Receive the planner's output describing the software to build.
 - Create ALL required source code files directly into the `generated/` directory using MCP tools such as write_file(), create_folder(), and list_files().
 - Do NOT output raw code in your chat response. Instead, use file writing tools to create the project structure.
+- Do NOT create a testing directory. The tester agent will create this. Only create the directories necessary for the source code.
 - Generate:
   - Application source code
   - A README explaining how to run the project locally

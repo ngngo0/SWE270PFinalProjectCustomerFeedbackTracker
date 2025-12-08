@@ -2,7 +2,7 @@ import os
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("Tester")
-
+print("CWD:", os.getcwd())
 BASE_PATH = "generated/tests"
 BASE_CODE_PATH = "generated"
 

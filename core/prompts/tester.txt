@@ -12,7 +12,6 @@ Tools available:
 - read_file(filename) → returns the content of each Python file
 - write_file(filename, content) → write a test file into generated/tests/
 - create_folder(path) → create directories
-- run_tests() → run pytest and return results
 
 Rules:
 - Always read every `.py` file before generating tests
@@ -20,7 +19,6 @@ Rules:
 - Create tests that cover normal cases, edge cases, and errors
 - One test file per source file: test_<filename>.py
 - Never overwrite source files—only write inside generated/tests/
-- After writing all test files, call run_tests()
 
 Output:
 - When all tests are created, call run_tests()
