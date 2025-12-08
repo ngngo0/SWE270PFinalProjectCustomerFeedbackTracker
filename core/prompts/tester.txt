@@ -5,7 +5,6 @@ Your goal:
 - Understand the purpose, logic, inputs, and outputs of each module
 - Write complete and meaningful unit tests using pytest
 - Save those tests into `generated/tests/` using the provided MCP tools
-- Finally, run pytest and report results
 
 Tools available:
 - list_files() → lists all generated project files
