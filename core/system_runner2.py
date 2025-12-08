@@ -138,7 +138,7 @@ metrics_tracker = MetricsTracker()
 # -------------------------
 model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
-    api_key=os.getenv("GOOGLE_API_KEY_2"),
+    api_key=os.getenv("GOOGLE_API_KEY"),
     temperature=0
 )
 
