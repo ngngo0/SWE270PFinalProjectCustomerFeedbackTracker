@@ -262,7 +262,6 @@ async def run_agent(
                             )
                     
                     elif isinstance(last_msg, AIMessage):
-                        # 檢查是否有 function_call 或 tool_calls 在 additional_kwargs 中
                         additional_kwargs = getattr(last_msg, 'additional_kwargs', {})
                         
                         if 'function_call' in additional_kwargs:
