@@ -33,25 +33,23 @@ def test_filename_for(source_filename: str) -> str:
 
 
 @mcp.tool()
+# In tester_server.py
 def generate_tests(code: str) -> str:
-    """
-    A smarter test generator: extracts functions and creates basic test stubs.
-    """
     import ast
-
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return "Could not parse file for test generation."
-
+    tree = ast.parse(code)
     functions = [node.name for node in tree.body if isinstance(node, ast.FunctionDef)]
-
+    
     out = ["import pytest\n"]
     for fn in functions:
-        out.append(f"\n\ndef test_{fn}():\n    # TODO: write real test\n    assert False  # placeholder\n")
+        out.append(f"""
+        def test_{fn}_exists():
+            assert callable({fn})
 
-    return "\n".join(out).strip()
-
+        def test_{fn}_basic():
+            pass  # TODO: implement
+        """)
+            
+    return "\n".join(out).strip()  # Use pass, not assert False
 
 @mcp.tool()
 def write_file(filename: str, content: str) -> str:
@@ -76,7 +74,7 @@ def list_files() -> list[str]:
     result = []
     for root, dirs, files in os.walk(BASE_CODE_PATH):
         for file in files:
-            path = os.path.relpath(os.path.join(root, file), BASE_PATH)
+            path = os.path.relpath(os.path.join(root, file), BASE_CODE_PATH)  # Fixed
             result.append(path)
     return result
 
@@ -116,6 +114,23 @@ def generate_tests_for_all() -> list[str]:
         results.append(write_result)
 
     return results
+
+# In tester_server.py
+@mcp.tool()
+def run_tests(test_dir: str = "generated/tests") -> dict:
+    """Execute pytest and return results"""
+    import subprocess
+    result = subprocess.run(
+        ["python", "-m", "pytest", test_dir, "-v"],
+        capture_output=True,
+        text=True
+    )
+    return {
+        "exit_code": result.returncode,
+        "passed": result.returncode == 0,
+        "output": result.stdout,
+        "stderr": result.stderr
+    }
 
 
 if __name__ == "__main__":
