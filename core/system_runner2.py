@@ -193,12 +193,19 @@ async def run_agent(
                 await session.initialize()
                 await log_status("MCP session initialized successfully", agent=agent_name, status_callback=status_callback)
                 
-                tools_list = await load_mcp_tools(session)
-                tools_map = {tool.name: tool for tool in tools_list}
+                tools = await load_mcp_tools(session)
+                if isinstance(tools, dict):
+                    tool_names = list(tools.keys())
+                else:
+                    tool_names = [t.name for t in tools]
                 
-                await log_status(f"Loaded {len(tools_list)} tools: {list(tools_map.keys())}", agent=agent_name, status_callback=status_callback)
+                await log_status(
+                    f"Loaded {len(tool_names)} tools: {tool_names}",
+                    agent=agent_name,
+                    status_callback=status_callback
+                )
                 
-                agent = create_agent(model, tools_list)
+                agent = create_agent(model, tools)
 
                 messages = [
                     SystemMessage(content=system_prompt),
@@ -207,41 +214,61 @@ async def run_agent(
                 
                 await log_status(f"Starting agent execution loop", agent=agent_name, status_callback=status_callback)
 
+                # ---- ENHANCED TOOL EXECUTION LOOP ----
                 while True:
                     iteration_count += 1
                     metrics_tracker.record_iteration(agent_name)
                     await log_status(f"Iteration #{iteration_count}", level="DEBUG", agent=agent_name, status_callback=status_callback)
                     
+                    # Estimate input tokens
                     input_tokens = sum(len(str(m.content)) // 4 for m in messages)
                     
                     result = await agent.ainvoke({"messages": messages})
-                    last_msg = result["messages"][-1]
                     
-                    output_tokens = len(str(last_msg.content)) // 4
-                    metrics_tracker.record_api_call(agent_name, input_tokens, output_tokens)
-                    
-                    has_tool_calls = False
-                    if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:
-                        has_tool_calls = True
-                        for tool_call in last_msg.tool_calls:
+                    # FIX: Check ALL messages for ToolMessages, not just the last one
+                    new_tool_calls = 0
+                    for msg in result["messages"]:
+                        if isinstance(msg, ToolMessage):
+                            new_tool_calls += 1
                             tool_calls_count += 1
                             metrics_tracker.record_tool_call(agent_name)
                             
+                            tool_name = msg.name if hasattr(msg, 'name') else 'unknown'
+                            
+                            await log_status(
+                                f"Tool call #{tool_calls_count}: {tool_name} (detected from message history)",
+                                agent=agent_name,
+                                status_callback=status_callback
+                            )
+                    
+                    last_msg = result["messages"][-1]
+                    
+                    # Estimate output tokens
+                    output_tokens = len(str(last_msg.content)) // 4
+                    metrics_tracker.record_api_call(agent_name, input_tokens, output_tokens)
+
+                    # Update messages for next iteration
+                    messages = result["messages"]
+                    
+                    # Check if the last message has tool_calls (agent wants to call tool)
+                    if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:
+                        for tool_call in last_msg.tool_calls:
                             tool_name = tool_call.get('name', 'unknown')
                             args = tool_call.get('args', {})
                             
                             await log_status(
-                                f"Tool call #{tool_calls_count}: {tool_name}",
+                                f"Tool call queued: {tool_name}",
                                 agent=agent_name,
                                 status_callback=status_callback
                             )
 
-                            tool_fn = tools_map.get(tool_name)
+                            tool_fn = tools.get(tool_name)
                             if tool_fn is None:
                                 error_msg = f"Unknown tool: {tool_name}"
                                 await log_status(error_msg, level="ERROR", agent=agent_name, status_callback=status_callback)
                                 raise RuntimeError(error_msg)
 
+                            # Execute tool
                             try:
                                 tool_output = await tool_fn.ainvoke(args)
                                 await log_status(
@@ -254,87 +281,16 @@ async def run_agent(
                                 await log_status(error_msg, level="ERROR", agent=agent_name, status_callback=status_callback)
                                 raise
 
+                            # Append tool result back to agent
                             messages.append(
                                 ToolMessage(
                                     content=str(tool_output),
                                     tool_call_id=tool_call.get('id', '')
                                 )
                             )
-                    
-                    elif isinstance(last_msg, AIMessage):
-                        additional_kwargs = getattr(last_msg, 'additional_kwargs', {})
-                        
-                        if 'function_call' in additional_kwargs:
-                            has_tool_calls = True
-                            tool_calls_count += 1
-                            metrics_tracker.record_tool_call(agent_name)
-                            
-                            func_call = additional_kwargs['function_call']
-                            tool_name = func_call.get('name', 'unknown')
-                            
-                            await log_status(
-                                f"Tool call #{tool_calls_count}: {tool_name} (via function_call)",
-                                agent=agent_name,
-                                status_callback=status_callback
-                            )
-                            
-                            import json as json_lib
-                            args = json_lib.loads(func_call.get('arguments', '{}'))
-                            
-                            tool_fn = tools_map.get(tool_name)
-                            if tool_fn:
-                                tool_output = await tool_fn.ainvoke(args)
-                                messages.append(
-                                    ToolMessage(
-                                        content=str(tool_output),
-                                        name=tool_name
-                                    )
-                                )
-                                continue
-                    
-                    if not has_tool_calls:
-                        for msg in result["messages"]:
-                            if isinstance(msg, ToolMessage):
-                                has_tool_calls = True
-                                tool_calls_count += 1
-                                metrics_tracker.record_tool_call(agent_name)
-                                
-                                await log_status(
-                                    f"Tool call #{tool_calls_count}: {msg.name} (detected from ToolMessage)",
-                                    agent=agent_name,
-                                    status_callback=status_callback
-                                )
-                    
-                    if has_tool_calls:
                         continue
                     
-                    if isinstance(last_msg, ToolMessage):
-                        tool_calls_count += 1
-                        metrics_tracker.record_tool_call(agent_name)
-                        
-                        tool_name = last_msg.name
-                        args = getattr(last_msg, 'arguments', {})
-
-                        await log_status(
-                            f"Tool call #{tool_calls_count}: {tool_name}",
-                            agent=agent_name,
-                            status_callback=status_callback
-                        )
-
-                        tool_fn = tools_map.get(tool_name)
-                        if tool_fn is None:
-                            raise RuntimeError(f"Unknown tool: {tool_name}")
-
-                        tool_output = await tool_fn.ainvoke(args)
-                        messages.append(
-                            ToolMessage(
-                                name=tool_name,
-                                content=json.dumps(tool_output)
-                            )
-                        )
-                        continue
-
-                    # No more tools -> final answer
+                    # No more tools to call → final answer
                     await log_status(
                         f"Agent completed after {iteration_count} iterations and {tool_calls_count} tool calls",
                         agent=agent_name,
@@ -385,7 +341,8 @@ async def run_system(description: str, requirements: str, status_callback=None):
         await log_status("="*70, agent="SYSTEM", status_callback=status_callback)
         
         await log_status("Building planner agent...", status_callback=status_callback)
-        planner_system_prompt = load_prompt("core/prompts/planner.txt")
+        planner_system_prompt = "You are a planner agent, create a plan for this software based on these requirements"
+        #planner_system_prompt =load_prompt("core/prompts/planner.txt")
         await log_status("Prompt loaded, executing planner agent...", status_callback=status_callback)
 
         planner_output = await run_agent(
@@ -395,7 +352,7 @@ async def run_system(description: str, requirements: str, status_callback=None):
             "planner",
             status_callback
         )
-        await log_status("Planner phase completed successfully", agent="SYSTEM", status_callback=status_callback)
+        await log_status("✅ Planner phase completed successfully", agent="SYSTEM", status_callback=status_callback)
         print("Planner output:", planner_output)
 
         # === DEVELOPER AGENT ===
@@ -405,7 +362,8 @@ async def run_system(description: str, requirements: str, status_callback=None):
         await log_status("Passing planner output to developer...", agent="SYSTEM", status_callback=status_callback)
         
         await log_status("Building developer agent...", status_callback=status_callback)
-        developer_system_prompt = load_prompt("core/prompts/developer.txt")
+        #developer_system_prompt = load_prompt("core/prompts/developer.txt")
+        developer_system_prompt = "You are a software developer. Given this plan, make a readme, and the full application with a local host version I can spin up."
         await log_status("Prompt loaded, executing developer agent...", status_callback=status_callback)
         
         developer_output = await run_agent(
@@ -415,7 +373,7 @@ async def run_system(description: str, requirements: str, status_callback=None):
             "developer",
             status_callback
         )
-        await log_status("Developer phase completed successfully", agent="SYSTEM", status_callback=status_callback)
+        await log_status("✅ Developer phase completed successfully", agent="SYSTEM", status_callback=status_callback)
         print("Developer output:", developer_output)
 
         # === TESTER AGENT ===
@@ -425,7 +383,8 @@ async def run_system(description: str, requirements: str, status_callback=None):
         await log_status("Passing developer output to tester...", agent="SYSTEM", status_callback=status_callback)
         
         await log_status("Building tester agent...", status_callback=status_callback)
-        tester_system_prompt = load_prompt("core/prompts/tester.txt")
+        #tester_system_prompt = load_prompt("core/prompts/tester.txt")
+        tester_system_prompt = "You are a software tester. Given the files in the generated folder, write test cases and run the test cases to make sure there are no bugs."
         await log_status("Prompt loaded, executing tester agent...", status_callback=status_callback)
         
         tester_output = await run_agent(
@@ -435,7 +394,7 @@ async def run_system(description: str, requirements: str, status_callback=None):
             "tester",
             status_callback
         )
-        await log_status("Tester phase completed successfully", agent="SYSTEM", status_callback=status_callback)
+        await log_status("✅ Tester phase completed successfully", agent="SYSTEM", status_callback=status_callback)
         print("Tester output:", tester_output)
 
         # === COMPLETION ===
