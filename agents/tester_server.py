@@ -76,7 +76,8 @@ def list_files() -> list[str]:
     result = []
     for root, dirs, files in os.walk(BASE_CODE_PATH):
         for file in files:
-            path = os.path.relpath(os.path.join(root, file), BASE_PATH)
+            #path = os.path.relpath(os.path.join(root, file), BASE_PATH)
+            path = os.path.relpath(os.path.join(root, file), BASE_CODE_PATH)  # Fixed
             result.append(path)
     return result
 
