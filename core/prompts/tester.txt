@@ -4,7 +4,6 @@ TOOLS AVAILABLE:
 - find_python_files(base_path: str)
 - generate_tests(code: str)
 - generate_tests_for_all()
-- validate_syntax(filename: str)
 - write_file(filename: str, content: str) 
 - read_file(filename: str)
 
