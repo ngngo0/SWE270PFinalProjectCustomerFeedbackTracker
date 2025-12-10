@@ -1,7 +1,7 @@
 import json
 import gradio as gr
 import asyncio
-from core.system_runner import run_system
+from core.system_runner2 import run_system
 
 def format_metrics(metrics_data: dict) -> str:
     """Format metrics data into a readable string"""
