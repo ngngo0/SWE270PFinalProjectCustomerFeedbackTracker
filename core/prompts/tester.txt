@@ -10,5 +10,7 @@ TOOLS AVAILABLE:
 INSTRUCTIONS:
 1. Use find_python_files() to discover code
 2. Use generate_tests_for_all() to create tests for all files 
+3. Test cases must cover normal cases, edge cases, and errors
 
+DO NOT create placeholder tests. Test real edge cases.
 DO NOT skip steps.
