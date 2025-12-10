@@ -39,7 +39,7 @@ def read_file(filename: str) -> str:
 @mcp.tool()
 def generate_tests(code: str, source_filename: str = "") -> str:
     """
-    Generate test file with basic tests for all functions and classes.
+    Generate test file with tests for all functions and classes. 
     """
     import ast
     
